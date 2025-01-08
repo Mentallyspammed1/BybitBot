@@ -1,0 +1,2 @@
+# BybitBot
+Trading bot
