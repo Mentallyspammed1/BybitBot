@@ -5,3 +5,12 @@ ccxt
 colorama
 python-dotenv
 scikit-learn
+flake8
+black
+autopep8
+cookiecutter
+bandit
+mypy
+pytest
+pytest-cov
+pip-check-updates
