@@ -1,0 +1,34 @@
+[36m2025-03-02 00:34:49,947 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 00:34:53,415 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 00:35:24,698 - [33mINFO - [32mStarting trading bot with symbol: BTC/USDT[0m
+[36m2025-03-02 00:35:34,227 - [33mINFO - [32mStarting trading bot with symbol: BTC/USDT:USDT[0m
+[36m2025-03-02 00:35:35,772 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:35:44,274 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:38:19,065 - [33mINFO - [32mStopping trading bot...[0m
+[36m2025-03-02 00:38:19,069 - [33mINFO - [32mTrading bot signaled to stop. It might take a moment to fully stop.[0m
+[36m2025-03-02 00:38:28,439 - [33mINFO - [32mStarting trading bot with symbol: TRUMP/USDT:USDT[0m
+[36m2025-03-02 00:38:32,230 - [33mINFO - [32mStarting trading bot with symbol: TRUMP/USDT:USDT[0m
+[36m2025-03-02 00:38:33,312 - [33mINFO - [32mStarting trading bot with symbol: TRUMP/USDT:USDT[0m
+[36m2025-03-02 00:38:34,622 - [33mINFO - [32mStarting trading bot with symbol: TRUMP/USDT:USDT[0m
+[36m2025-03-02 00:38:36,576 - [33mINFO - [32mStarting trading bot with symbol: TRUMP/USDT:USDT[0m
+[36m2025-03-02 00:38:37,213 - [33mINFO - [32mStarting trading bot with symbol: TRUMP/USDT:USDT[0m
+[36m2025-03-02 00:38:38,480 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:38:41,817 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:38:43,718 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:38:44,782 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:38:47,836 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:38:49,892 - [33mINFO - [32mTrading bot started in a new thread.[0m
+[36m2025-03-02 00:51:56,604 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 00:57:10,194 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 00:57:13,576 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:00:16,145 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:01:19,682 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:01:38,956 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:01:42,273 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:20:09,351 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:20:16,077 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:20:19,357 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:33:05,592 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:33:09,076 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:50:22,652 - [33mINFO - [32mStarting Flask app...[0m
+[36m2025-03-02 01:50:26,201 - [33mINFO - [32mStarting Flask app...[0m

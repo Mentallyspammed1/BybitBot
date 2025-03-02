@@ -1,0 +1,45 @@
+exchange:
+  exchange_id: bybit
+
+trading:
+  symbol: TRUMP/USDT # Default symbol, can be overridden by Flask App
+  simulation_mode: True
+
+order_book:
+  depth: 10
+  imbalance_threshold: 1.5
+  volume_cluster_threshold: 10000
+  ob_delta_lookback: 5
+  cluster_proximity_threshold_pct: 0.005
+
+indicators:
+  volatility_window: 30
+  volatility_multiplier: 2.0
+  ema_period: 10
+  rsi_period: 14
+  macd_short_period: 12
+  macd_long_period: 26
+  macd_signal_period: 9
+  stoch_rsi_period: 14
+  stoch_rsi_k_period: 3
+  stoch_rsi_d_period: 3
+
+risk_management:
+  order_size_percentage: 0.01
+  stop_loss_percentage: 0.015
+  take_profit_percentage: 0.03
+  max_open_positions: 5
+  time_based_exit_minutes: 60 # Exit position after X minutes, set to None to disable
+trailing_stop:
+  trailing_stop_active: False
+  trailing_stop_callback: 0.02
+
+signal_weights:
+  ema_weight: 1.0
+  rsi_weight: 0.8
+  macd_weight: 1.2
+  stoch_rsi_weight: 0.7
+  imbalance_weight: 1.5
+  ob_delta_change_weight: 0.6
+  spread_weight: -0.3
+  cluster_proximity_weight: 0.4
