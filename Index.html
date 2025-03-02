@@ -87,7 +87,7 @@ function fetchStatus() {
         document.getElementById('balance').innerText = data.balance;
         document.getElementById('pnl').innerText = data.total_pnl.toFixed(2);
         let ordersTableBody = document.querySelector('#orders-table tbody');
-        ordersTableBody.innerHTML = '';
+        let rowsHTML = '';
         data.open_orders.forEach(order => {
             let row = `<tr>
                 <td>${order.symbol}</td>
@@ -97,8 +97,9 @@ function fetchStatus() {
                 <td>${order.current_price.toFixed(2)}</td>
                 <td>${order.pnl.toFixed(2)}</td>
             </tr>`;
-            ordersTableBody.innerHTML += row;
+            rowsHTML += row;
         });
+        ordersTableBody.innerHTML = rowsHTML;
     });
 }
 
