@@ -1,4 +1,4 @@
-name: Python CI
+name: Python Guide
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
         python-version: '3.8'  # Adjust the Python version as needed
 
     - name: Cache dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -64,20 +64,5 @@ jobs:
     - name: Run tests with pytest
       run: pytest --cov=.
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-
     - name: Check for outdated dependencies
       run: npx pip-check-updates
-
-    - name: Publish to PyPI
-      if: github.event_name == 'release'
-      uses: pypa/gh-action-pypi-publish@v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
