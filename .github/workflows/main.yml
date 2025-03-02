@@ -50,7 +50,7 @@ jobs:
         run: |
           set -e
           pip install -r requirements.txt
-            # Add custom template installs here...
+          # Add custom template installs here...
 
       - name: Correct and lint code with ruff
         run: |
@@ -103,7 +103,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: test-results}-${{ matrix.python_version }}-${{ matrix.os }}
+          name: test-results-${{ matrix.python_version }}-${{ matrix.os }}
           path: junit.xml
           retention-days: 14
 
@@ -111,7 +111,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: static-analysis-reports}-${{ matrix.python_version }}-${{ matrix.os }}
+          name: static-analysis-reports-${{ matrix.python_version }}-${{ matrix.os }}
           path: |
             prospector_report.txt
             pip-audit.json
