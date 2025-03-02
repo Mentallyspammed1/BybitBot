@@ -72,6 +72,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '14'
+
+      - name: Run Copilot CLI
         run: |
           set -e
           npm install -g @githubnext/copilot-cli # Using npm to install copilot-cli, might be more reliable
@@ -123,11 +125,3 @@ jobs:
           echo "Building generated files:"
           echo -n "${{repo_dir}}\generatedFiles.txt"
           echo "Stopping..."
-
-  run-on: development
-  schedule:
-    - cron: '0 0 * * *'
-
-
-  DEVELOP_SIZE_MAXMB: 25
-  DEPLOYMENT_SIZE_MAXMB: 125
