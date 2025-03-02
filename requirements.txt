@@ -1,0 +1,7 @@
+numpy
+pandas
+pyyaml
+ccxt
+colorama
+python-dotenv
+scikit-learn
