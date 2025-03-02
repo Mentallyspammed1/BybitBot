@@ -1,20 +1,14 @@
-name: Python CI/CD - Supercharged Workflow (50+ Features)
-
 on:
   push:
     branches:
       - main
       - develop
-      - feature/*
-      - release/*
-      - hotfix/*
+      - feature/
   pull_request:
     branches:
       - main
       - develop
-      - feature/*
-      - release/*
-      - hotfix/*
+      - feature/
     types: [opened, reopened, synchronize, labeled, unlabeled, edited, closed]
   workflow_dispatch:
   schedule:
@@ -25,68 +19,91 @@ env:
   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
   DEPLOYMENT_ENVIRONMENT: ${{ github.event.pull_request.head.ref == 'develop' && 'staging' || github.ref == 'refs/heads/main' && 'production' || 'development' }}
+  DEVELOP_SIZE_MAXMB: 25
+  DEPLOYMENT_SIZE_MAXMB: 125
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13-dev"]
+        python_version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13-dev"]
+        lang: python
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Set up ${{ matrix.python_version }} dependencies
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
+          python-version: ${{ matrix.python_version }}
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          set -e
+          pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Correct code with autopep8
+      - name: Install necessary templates and extensions
         run: |
-          pip install autopep8
-          autopep8 --in-place --aggressive --aggressive **/*.py
+          set -e
+          pip install -r requirements.txt
+            # Add custom template installs here...
 
-      - name: Lint with flake8, pylint, and prospector (Feature 3)
+      - name: Correct and lint code with ruff
         run: |
-          pip install flake8 pylint prospector
-          flake8 .
-          pylint --rcfile=pylint.rc your_package
+          set -e
+          pip install ruff
+          # Apply fixes and lint in place, more comprehensive than autopep8, flake8 and pylint for many checks
+          ruff check --fix --select ALL .
+          ruff format .
+          # You can configure ruff in pyproject.toml for more granular control
+
+      - name: Lint with prospector (Additional checks)
+        run: |
+          set -e
+          pip install prospector
           prospector -o prospector_report.txt your_package
+          # Consider reviewing if prospector is still necessary with comprehensive ruff setup
 
       - name: Generate code with Copilot (Python only)
         uses: actions/setup-node@v3
         with:
           node-version: '14'
         run: |
-          npm install -g @githubnext/copilot-cli
+          set -e
+          npm install -g @githubnext/copilot-cli # Using npm to install copilot-cli, might be more reliable
           copilot generate --input <input-file> --output <output-file>
+          # Add custom Copilot commands here...
+          # Consider making input-file and output-file configurable via workflow variables
+
+      - name: Check commit SHA
+        run: |
+          echo "New changes detected: ${{ github.event.body.sha }}" | mailto:user@example.com -s 'New Commit Successfully Detected' -A
 
       - name: Run tests with pytest, coverage, and parallelization (Feature 8)
         run: |
+          set -e
           pip install pytest pytest-cov pytest-xdist
-          pytest --cov=your_package --cov-report=xml --junitxml=junit.xml -n auto
+          pytest --cov=your_package --codesource-cov --cov-all --names-only --junitxml=junit.xml -n auto
+          coverage xml
+          # Add custom test-run commands here...
 
       - name: Upload coverage to Codecov (Feature 13)
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
           flags: unittests
-          name: codecov-python-${{ matrix.python-version }}-${{ matrix.os }}
+          name: codecov-python-${{ matrix.python_version }}-${{ matrix.os }}
           fail_ci_if_error: true
 
       - name: Archive test results and reports (Feature 14)
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: test-results-${{ matrix.python-version }}-${{ matrix.os }}
+          name: test-results}-${{ matrix.python_version }}-${{ matrix.os }}
           path: junit.xml
           retention-days: 14
 
@@ -94,7 +111,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: static-analysis-reports-${{ matrix.python-version }}-${{ matrix.os }}
+          name: static-analysis-reports}-${{ matrix.python_version }}-${{ matrix.os }}
           path: |
             prospector_report.txt
             pip-audit.json
@@ -102,15 +119,15 @@ jobs:
 
       - name: Generate a build report (Feature 16)
         run: |
-          echo "Build Summary:" > build_report.txt
-          echo "Python Version: ${{ matrix.python-version }}" >> build_report.txt
-          echo "Operating System: ${{ matrix.os }}" >> build_report.txt
-          cat build_report.txt
-        continue-on-error: true
+          # Use stdlib libraries if available
+          echo "Building generated files:"
+          echo -n "${{repo_dir}}\generatedFiles.txt"
+          echo "Stopping..."
 
-      - name: Upload build report
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-report-${{ matrix.python-version }}-${{ matrix.os }}
-          path: build_report.txt
-          retention-days: 14
+  run-on: development
+  schedule:
+    - cron: '0 0 * * *'
+
+env:
+  DEVELOP_SIZE_MAXMB: 25
+  DEPLOYMENT_SIZE_MAXMB: 125
