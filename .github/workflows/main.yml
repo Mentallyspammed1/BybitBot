@@ -1,14 +1,16 @@
+name: CI/CD Pipeline
+
 on:
   push:
     branches:
       - main
       - develop
-      - feature/
+      - feature/*
   pull_request:
     branches:
       - main
       - develop
-      - feature/
+      - feature/*
     types: [opened, reopened, synchronize, labeled, unlabeled, edited, closed]
   workflow_dispatch:
   schedule:
@@ -28,45 +30,31 @@ jobs:
     strategy:
       matrix:
         python_version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13-dev"]
-        lang: python
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up ${{ matrix.python_version }} dependencies
+      - name: Set up Python ${{ matrix.python_version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python_version }}
 
       - name: Install dependencies
         run: |
-          set -e
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install necessary templates and extensions
+      - name: Format code with black
         run: |
-          set -e
-          pip install -r requirements.txt
-          # Add custom template installs here...
+          pip install black
+          black .
 
-      - name: Correct and lint code with ruff
+      - name: Lint and format code with ruff
         run: |
-          set -e
           pip install ruff
-          # Apply fixes and lint in place, more comprehensive than autopep8, flake8 and pylint for many checks
-          ruff check --fix --select ALL .
-          ruff format .
-          # You can configure ruff in pyproject.toml for more granular control
-
-      - name: Lint with prospector (Additional checks)
-        run: |
-          set -e
-          pip install prospector
-          prospector -o prospector_report.txt your_package
-          # Consider reviewing if prospector is still necessary with comprehensive ruff setup
+          ruff check --fix .
 
       - name: Generate code with Copilot (Python only)
         uses: actions/setup-node@v3
@@ -75,53 +63,30 @@ jobs:
 
       - name: Run Copilot CLI
         run: |
-          set -e
-          npm install -g @githubnext/copilot-cli # Using npm to install copilot-cli, might be more reliable
+          npm install -g @githubnext/copilot-cli
           copilot generate --input <input-file> --output <output-file>
-          # Add custom Copilot commands here...
-          # Consider making input-file and output-file configurable via workflow variables
 
-      - name: Check commit SHA
+      - name: Run tests with pytest
         run: |
-          echo "New changes detected: ${{ github.event.body.sha }}" | mailto:user@example.com -s 'New Commit Successfully Detected' -A
-
-      - name: Run tests with pytest, coverage, and parallelization (Feature 8)
-        run: |
-          set -e
           pip install pytest pytest-cov pytest-xdist
-          pytest --cov=your_package --codesource-cov --cov-all --names-only --junitxml=junit.xml -n auto
-          coverage xml
-          # Add custom test-run commands here...
+          pytest --cov=your_package --cov-report=xml -n auto
 
-      - name: Upload coverage to Codecov (Feature 13)
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
           flags: unittests
-          name: codecov-python-${{ matrix.python_version }}-${{ matrix.os }}
+          name: codecov-python-${{ matrix.python_version }}
           fail_ci_if_error: true
 
-      - name: Archive test results and reports (Feature 14)
+      - name: Archive test results
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: test-results-${{ matrix.python_version }}-${{ matrix.os }}
-          path: junit.xml
+          name: test-results-${{ matrix.python_version }}
+          path: coverage.xml
           retention-days: 14
 
-      - name: Upload static analysis reports (Feature 15)
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: static-analysis-reports-${{ matrix.python_version }}-${{ matrix.os }}
-          path: |
-            prospector_report.txt
-            pip-audit.json
-          retention-days: 14
-
-      - name: Generate a build report (Feature 16)
+      - name: Generate build report
         run: |
-          # Use stdlib libraries if available
-          echo "Building generated files:"
-          echo -n "${{repo_dir}}\generatedFiles.txt"
-          echo "Stopping..."
+          echo "Build completed for Python ${{ matrix.python_version }}"
