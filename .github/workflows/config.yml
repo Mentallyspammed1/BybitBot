@@ -1,0 +1,6 @@
+name: Workflow Configurations
+
+env:
+  PYTHON_VERSION: "3.11"
+  CACHE_DURATION: "3600"
+  DEFAULT_BRANCH: "main"
