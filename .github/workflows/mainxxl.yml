@@ -1,0 +1,132 @@
+name: Termux Code Analyzer & Packager
+
+# Triggers for pushes, pull requests to main, and manual runs
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Ensures only one workflow runs at a time per branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-enhance:
+    runs-on: ubuntu-22.04  # Explicit version for Termux compatibility
+    steps:
+      # Checkout repository code
+      - name: ✨ Checkout Code - Retrieve the Scrolls
+        uses: actions/checkout@v4.1.1
+
+      # Set up Python 3.10 for analysis and Termux tools
+      - name: 🐍 Set up Python 3.10 - Prepare the Cauldron
+        uses: actions/setup-python@v5.0.0
+        with:
+          python-version: "3.10"
+
+      # Cache pip dependencies for efficiency
+      - name: 📦 Cache pip Dependencies - Preserve the Ingredients
+        id: cache-pip
+        uses: actions/cache@v4.0.2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      # Install base dependencies if cache misses
+      - name: 🧪 Install Base Dependencies - Gather Initial Elixirs
+        if: steps.cache-pip.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --upgrade pip==24.0
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; else echo "No requirements.txt found, proceeding..."; fi
+
+      # Install analysis and enhancement tools
+      - name: 🔧 Install Analysis & Enhancement Tools - Forge the Instruments
+        run: |
+          pip install pylint==2.17.7 flake8==7.0.0 mypy==1.8.0 black==24.2.0 isort==5.13.2 bandit==1.7.7 pylint-actions==0.3.0 termux-pkgbuild==0.11.0
+
+      # Verify tool versions for consistency
+      - name: 📋 List Tool Versions - Inspect the Arsenal
+        run: |
+          echo "Installed tool versions:"
+          pip list | grep -E 'pylint|flake8|mypy|black|isort|bandit|termux-pkgbuild'
+
+      # Pylint analysis with text output for Termux
+      - name: 🔍 Pylint - Scrutinize for Flaws
+        run: |
+          pylint -f text src/ || (echo "Pylint found issues in src/. Check logs or run 'pylint src/' locally." && exit 1)
+        env:
+          PYLINTRC: .pylintrc  # Uses custom config if present
+
+      # Optional GitHub Actions annotations (for CI visibility)
+      - name: 🔍 Pylint for GitHub - Annotate the Codex
+        if: github.event_name != 'workflow_dispatch'  # Skips for manual runs
+        run: pylint -f actions src/ || true  # Continues even on failure for visibility
+
+      # Flake8 style check
+      - name: 👁️ Flake8 - Inspect for Style Deviations
+        run: flake8 src/ || (echo "Flake8 detected style issues in src/. Run 'flake8 src/' locally to debug." && exit 1)
+
+      # MyPy type check
+      - name: 🔮 MyPy - Foresee Type Inconsistencies
+        run: mypy src/ || (echo "MyPy found type errors in src/. Run 'mypy src/' to investigate." && exit 1)
+
+      # Bandit security check
+      - name: 🛡️ Bandit - Guard Against Security Vulnerabilities
+        run: bandit -r src/ || (echo "Bandit detected security issues in src/. Run 'bandit -r src/' for details." && exit 1)
+
+      # Isort import order check
+      - name: ✨ Isort - Harmonize Imports Order (Check)
+        run: isort --check --diff src/ || echo "Import order issues detected. Run 'isort src/' locally to fix."
+        continue-on-error: true
+
+      # Black formatting check
+      - name: ⚫ Black - Enforce Code Style Uniformity (Check)
+        run: black --check --diff src/ || echo "Formatting issues detected. Run 'black src/' locally to fix."
+        continue-on-error: true
+
+      # Set up Android NDK for Termux package building
+      - name: ⚙️ Set Up Android NDK - Craft the Arsenal
+        uses: nttld/setup-ndk@v1.4.2
+        with:
+          ndk-version: r25c
+          add-to-path: true
+        id: setup-ndk
+        env:
+          ANDROD_API_LEVEL: 21  # Matches termux-pkgbuild typo
+
+      # Build Termux package
+      - name: 🛠️ Build Termux Package - Forge for Android
+        run: |
+          termux-pkgbuild build src || {
+            echo "Failed to build Termux package from src/. Ensure src/ contains a valid build.sh per https://wiki.termux.com/wiki/Package_management."
+            exit 1
+          }
+          echo "Package built at packages/*.deb"
+
+      # Upload Termux package artifact
+      - name: 📤 Upload Package Artifact - Share the Bounty
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: termux-package
+          path: packages/*.deb
+          if-no-files-found: error  # Fails if no .deb is found
+
+      # Success message
+      - name: ✅ Completion Ritual - Analysis Performed
+        if: success()
+        run: echo "Code analysis, enhancement, and Termux package build completed successfully!"
+
+      # Failure message
+      - name: ❌ Failure Ritual - Analysis Uncovers Issues
+        if: failure()
+        run: echo "Analysis or build failed. Review logs for details."
+
+# Usage for Termux:
+# 1. Place in .github/workflows/termux-code.yml
+# 2. Ensure src/ has Python code and a build.sh for Termux packaging (see https://wiki.termux.com/wiki/Package_management)
+# 3. Push to main or run manually; download .deb from Actions tab
+# 4. In Termux on Android: pkg install ./termux-package*.deb
