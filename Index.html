@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neon Trading Bot Dashboard</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            margin: 20px auto;
+            max-width: 900px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 2px solid #0ff;
+        }
+        .section {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #111;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+        }
+        .log {
+            max-height: 300px;
+            overflow-y: scroll;
+            background-color: #000;
+            border: 1px solid #0ff;
+            padding: 10px;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #0ff;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Neon Trading Bot Dashboard</h1>
+    </div>
+    <div class="section" id="status">
+        <h2>Status</h2>
+        <p><strong>Account Balance:</strong> <span id="balance">Loading...</span></p>
+        <p><strong>Total PnL:</strong> <span id="pnl">Loading...</span></p>
+        <h3>Open Orders</h3>
+        <table id="orders-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Amount</th>
+                    <th>Entry Price</th>
+                    <th>Current Price</th>
+                    <th>PnL</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div class="section" id="log-section">
+        <h2>Logs</h2>
+        <div class="log" id="logs">
+            Loading logs...
+        </div>
+    </div>
+</div>
+<script>
+function fetchStatus() {
+    fetch('/api/status')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('balance').innerText = data.balance;
+        document.getElementById('pnl').innerText = data.total_pnl.toFixed(2);
+        let ordersTableBody = document.querySelector('#orders-table tbody');
+        let rowsHTML = '';
+        data.open_orders.forEach(order => {
+            let row = `<tr>
+                <td>${order.symbol}</td>
+                <td>${order.side}</td>
+                <td>${order.amount.toFixed(4)}</td>
+                <td>${order.entry_price.toFixed(2)}</td>
+                <td>${order.current_price.toFixed(2)}</td>
+                <td>${order.pnl.toFixed(2)}</td>
+            </tr>`;
+            rowsHTML += row;
+        });
+        ordersTableBody.innerHTML = rowsHTML;
+    });
+}
+
+function fetchLogs() {
+    fetch('/api/logs')
+    .then(response => response.json())
+    .then(data => {
+        let logsDiv = document.getElementById('logs');
+        logsDiv.innerText = data.logs.join('');
+    });
+}
+
+setInterval(fetchStatus, 5000);
+setInterval(fetchLogs, 5000);
+
+fetchStatus();
+fetchLogs();
+</script>
+</body>
+</html>
