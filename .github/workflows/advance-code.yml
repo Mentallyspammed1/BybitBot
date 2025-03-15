@@ -1,0 +1,25 @@
+name: Advanced Code Analysis
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install Tools
+        run: |
+          pip install radon xenon vulture prospector
+      - name: Complexity Analysis
+        run: |
+          radon cc . --min B
+          xenon --max-absolute B --max-modules B --max-average A .
+      - name: Dead Code Detection
+        run: vulture .
+      - name: Advanced Static Analysis
+        run: prospector --with-tool pylint --with-tool mccabe
