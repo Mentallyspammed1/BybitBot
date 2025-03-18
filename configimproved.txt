@@ -1,0 +1,296 @@
+cat > improved_config_complete.yaml <<EOL
+# Global Settings for aichat
+
+# Address to serve the web UI (if enabled)
+serve_addr: 127.0.0.1:8000
+
+# User agent string to use for web requests
+user_agent: auto
+
+# Whether to save shell command history (if shell tools are used)
+save_shell_history: true
+
+# URL to sync model list from (for updating available models)
+syncModelsURL: https://raw.githubusercontent.com/sigoden/aichat/main/models.yaml
+
+# Whether to use streaming responses from LLMs (for interactive output)
+stream_responses: true
+
+# -----------------------------------------------------------------------------
+# Clients - Define different LLM API clients (e.g., OpenAI, Gemini, Claude)
+# -----------------------------------------------------------------------------
+clients:
+  - type: gemini # Client type: Gemini (Google AI)
+    api_key: \$GEMINI_API_KEY # [bold red]IMPORTANT:[/bold red] Use environment variable GEMINI_API_KEY for security!
+    # [italic dim]To set environment variable in Termux, add to ~/.zshrc or ~/.bashrc: export GEMINI_API_KEY="YOUR_API_KEY"[/italic dim]
+    extra: # Extra settings specific to Gemini API
+      safety_settings: # Safety settings to control content filtering (set to BLOCK_NONE to disable filtering - use with caution)
+        - category: HARM_CATEGORY_HARASSMENT
+          threshold: BLOCK_NONE
+        - category: HARM_CATEGORY_HATE_SPEECH
+          threshold: BLOCK_NONE
+        - category: HARM_CATEGORY_SEXUALLY_EXPLICIT
+          threshold: BLOCK_NONE
+        - category: HARM_CATEGORY_DANGEROUS_CONTENT
+          threshold: BLOCK_NONE
+
+# -----------------------------------------------------------------------------
+# Models - Define available LLM models and associate them with clients
+# -----------------------------------------------------------------------------
+models:
+  - name: gemini:gemini-2.0-flash-thinking-exp-01-21 # Model name (for internal reference)
+    client: gemini # Client to use for this model (must match a client defined above)
+
+# -----------------------------------------------------------------------------
+# LLM Settings - Default settings for Large Language Models
+# -----------------------------------------------------------------------------
+model: gemini:gemini-2.0-flash-thinking-exp-01-21 # Default model to use for chats and roles
+temperature: 0.7 # Default temperature (0.0 - 1.0, lower for more deterministic output)
+top_p: 0.9 # Default top_p (nucleus sampling, 0.0 - 1.0, higher for more diverse output)
+max_output_tokens: 60000 # Maximum output tokens for LLM responses (adjust based on model limits)
+
+# -----------------------------------------------------------------------------
+# Behavior Settings - General chat behavior and UI settings
+# -----------------------------------------------------------------------------
+stream: true # Enable streaming output for a more interactive chat experience
+save: true # Whether to save chat sessions to files
+keybinding: emacs # Keybindings for REPL (emacs or vi)
+editor: nano # Default text editor to use for editing files within aichat (e.g., roles, sessions)
+wrap: auto # Text wrapping mode (auto, true, false)
+wrap_code: true # Whether to wrap code blocks in output
+highlight: true # Enable syntax highlighting in code blocks
+save_session: true # Whether to automatically save chat session on exit
+compress_threshold: 4000 # Threshold (in tokens) for compressing session history (to stay within context limits)
+copy_to_clipboard: true # Whether to automatically copy last response to clipboard
+
+# -----------------------------------------------------------------------------
+# Function Calling - Settings for using functions and tools
+# -----------------------------------------------------------------------------
+function_calling: true # Enable function calling/tool use
+mapping_tools: # Mapping of tool categories to specific tool names (example mappings below)
+  fs: 'fs_cat,fs_ls,fs_mkdir,fs_rm,fs_write' # 'fs' category maps to filesystem tools
+  web: 'web_search' # 'web' category maps to web search tool
+use_tools: fs, web # Default tools to enable globally (can be overridden in roles)
+
+# -----------------------------------------------------------------------------
+# Preliminary Settings - Settings for initial role and session on startup
+# -----------------------------------------------------------------------------
+prelude: role:default # Initial role to load when aichat starts (e.g., 'role:default' loads the 'default' role)
+repl_prelude: session:default # Initial session to load in REPL (e.g., 'session:default' loads the 'default' session)
+
+# -----------------------------------------------------------------------------
+# Session Settings - Settings related to chat sessions
+# -----------------------------------------------------------------------------
+summarize_prompt: 'Summarize the session concisely.' # Prompt used to summarize chat sessions
+
+# -----------------------------------------------------------------------------
+# RAG (Retrieval-Augmented Generation) Settings - Settings for RAG functionality
+# -----------------------------------------------------------------------------
+rag_embedding_model: gemini:embedding-001 # Model for embedding documents for RAG
+rag_reranker_model: gemini:reranker-001 # Model for reranking retrieved documents for RAG
+rag_top_k: 5 # Number of top documents to retrieve for RAG
+rag_chunk_size: 512 # Chunk size for splitting documents into smaller pieces for RAG
+rag_chunk_overlap: 128 # Chunk overlap for RAG document splitting
+rag_batch_size: 10 # Batch size for processing documents in RAG
+rag_template: | # Template for combining context and user input in RAG queries
+  __CONTEXT__
+  __INPUT__
+
+# -----------------------------------------------------------------------------
+# Appearance Settings - Customize the look and feel of the aichat interface
+# -----------------------------------------------------------------------------
+left_prompt: '[{session}] {role} > ' # Left prompt format in REPL (can include session and role info)
+right_prompt: '{model}' # Right prompt format in REPL (shows current model)
+themes: # Define custom color themes
+  default: # Theme name: default
+    prompt_color: "\033[1;34m" # Color for user prompts (blue)
+    response_color: "\033[1;32m" # Color for LLM responses (green)
+light_themes: false # Whether to use light color themes instead of dark themes
+
+# -----------------------------------------------------------------------------
+# Macros - Define reusable macros for common tasks or prompts
+# -----------------------------------------------------------------------------
+macros:
+  greet: "Hello, how can I assist you today?" # Macro 'greet' - simple greeting
+  time: "The current time is: $(date +%H:%M:%S)" # Macro 'time' - gets current time using shell command
+  date: "Today is: $(date +%Y-%m-%d)" # Macro 'date' - gets current date using shell command
+  brainstorm: "Generate ideas related to a topic." # Macro 'brainstorm' - from brainstorm.yaml
+  analyze: "In-depth examination of a topic or data." # Macro 'analyze' - from analyze.yaml
+  explain: "Simplify a complex concept." # Macro 'explain' - from explain.yaml
+  extract: "Pull out key information from text or data." # Macro 'extract' - from extract.yaml
+  filter: "Remove unwanted items from a list or data." # Macro 'filter' - from filter.yaml
+  generate_function: | # Macro 'generate_function' - from generate_function.yaml (multi-line shell script)
+    LANGUAGE="\$1"
+    DESCRIPTION="\$2"
+    PARAMETERS="\$3"  # Optional
+    RETURN_TYPE="\$4" # Optional
+    ERROR_HANDLING="\$5" # Optional, boolean
+    COMMENTS="\$6" # Optional, boolean
+    if [ -z "\$LANGUAGE" ] || [ -z "\$DESCRIPTION" ]; then
+      echo "Error: Language and description are required."
+      exit 1
+    fi
+    PROMPT="Generate a function in \${LANGUAGE} that does the    following: \${DESCRIPTION}."
+    if [ -n "\$PARAMETERS" ]; then
+      PROMPT="\$PROMPT Function parameters should be:          \${PARAMETERS}."
+    fi
+    if [ -n "\$RETURN_TYPE" ]; then
+      PROMPT="\$PROMPT The function should return a            \${RETURN_TYPE}."
+    fi
+    if [[ "\$ERROR_HANDLING" == "true" ]]; then
+      PROMPT="\$PROMPT Include basic error handling for invalidinputs."
+    fi
+    if [[ "\$COMMENTS" == "true" ]]; then
+      PROMPT="\$PROMPT Add comments to explain the code."
+    fi
+    PROMPT="\$PROMPT Please provide only the function code,
+    without surrounding text or explanations."
+    GENERATED_CODE=\$(aichat --text "\$PROMPT")
+    if [ -n "\$GENERATED_CODE" ]; then
+      echo "\$GENERATED_CODE"
+    else
+      echo "Error: Could not generate function code."
+      exit 1
+    fi
+  predict: "Forecast future outcomes based on data." # Macro 'predict' - from predict.yaml
+  parse: "Analyze the structure of text or data." # Macro 'parse' - from parse.yaml
+  sort: "Arrange items in a specific order." # Macro 'sort' - from sort.yaml
+  trend: "Identify patterns or trends in data." # Macro 'trend' - from trend.yaml
+
+# -----------------------------------------------------------------------------
+# Functions - Define function mappings (example functions - adjust to your needs)
+# -----------------------------------------------------------------------------
+functions:
+  - name: get_date # Function name (used in function calls)
+    command: "date" # Shell command to execute for this function
+  - name: get_weather # Function name
+    command: "/path/to/weather_plugin.sh" # [italic yellow]Placeholder path - replace with actual path to your weather script[/italic yellow]
+  - name: get_system_info # Function name
+    command: "uname -a" # Shell command to get system information
+  - name: show_system_uptime" # Function name
+    command: "functions/tool_2.sh" # Path to the tool script
+  - name: get_hardware_info" # Function name
+    command: "functions/tool_20.sh" # Path to the tool script
+  - name: count_files_in_directory" # Function name
+    command: "functions/tool_21.sh" # Path to the tool script
+  - name: list_directories" # Function name
+    command: "functions/tool_22.sh" # Path to the tool script
+  - name: get_file_size" # Function name
+    parameters: # Define parameters for the function
+      type: object
+      properties:
+        file: # Parameter: file path
+          type: string
+          description: File path
+      required: ["file"] # 'file' parameter is required
+    command: "functions/tool_23.sh" # Path to the tool script
+  - name: count_lines_in_file" # Function name
+    parameters: # Define parameters for the function
+      type: object
+      properties:
+        file: # Parameter: file path
+          type: string
+          description: File path
+      required: ["file"] # 'file' parameter is required
+    command: "functions/tool_24.sh" # Path to the tool script
+  - name: get_disk_space" # Function name
+    command: "functions/tool_15.sh" # Path to the tool script
+  - name: show_working_directory" # Function name
+    command: "functions/tool_16.sh" # Path to the tool script
+  - name: list_logged_in_users" # Function name
+    command: "functions/tool_17.sh" # Path to the tool script
+  - name: display_system_architecture" # Function name
+    command: "functions/tool_18.sh" # Path to the tool script
+  - name: perform_web_search" # Function name - Web Search tool
+    parameters: # Parameters for web search
+      type: object
+      properties:
+        query: # Parameter: search query
+          type: string
+          description: The search query
+      required: ["query"] # 'query' parameter is required
+    tool: # Tool definition (using 'tool' instead of 'command' for Python scripts)
+      type: python
+      command: "functions/web_search.py"
+  - name: process_json_data" # Function name - JSON processing tool
+    parameters: # Parameters for JSON processing
+      type: object
+      properties:
+        json_data: # Parameter: JSON data string
+          type: string
+          description: The JSON data string to process
+        jq_query: # Parameter: jq query string
+          type: string
+          description: The jq query to apply to the JSON data
+      required: ["json_data", "jq_query"] # Both parameters are required
+    tool: # Tool definition (using 'tool' instead of 'command' for shell scripts using jq)
+      type: shell
+      command: "functions/jq_tool.sh"
+  - name: get_current_time" # Function name - Current time tool
+    tool: # Tool definition for shell script without parameters
+      type: shell
+      command: "functions/current_time.sh"
+
+# -----------------------------------------------------------------------------
+# Agents - Define agents with specific instructions and behaviors
+# -----------------------------------------------------------------------------
+agents:
+  - name: assistant # Agent name: assistant
+    instructions: "Act as a helpful assistant with a friendly tone." # Instructions for the 'assistant' agent
+  - name: coding-agent # Agent name: coding-agent
+    instructions: | # Multi-line instructions for 'coding-agent'
+      You are a Senior Software Developer with expertise in coding, debugging, and explaining code.
+      - Generate accurate code snippets based on user requests (e.g., "Write a Python function to sort a list").
+      - Debug code by identifying errors and suggesting fixes (e.g., "Fix this: print(x.sort())").
+      - Explain code clearly, breaking down logic step-by-step (e.g., "Explain how this loop works").
+      - Use tools: 'fs' to read/write files (e.g., fs_cat, fs_write) and 'web' to search for solutions.
+      - Format code with proper syntax and include comments for clarity.
+      - If unsure, ask clarifying questions (e.g., "What language do you want this in?").
+
+# -----------------------------------------------------------------------------
+# Debug Settings - Settings for debugging and logging
+# -----------------------------------------------------------------------------
+debug_mode: true # Enable debug mode (for more verbose output and logging)
+log_file: ~/.config/aichat/aichat.log # Path to the log file
+
+# -----------------------------------------------------------------------------
+# AI-Powered Suggestions - Settings for enabling AI suggestions (if available)
+# -----------------------------------------------------------------------------
+suggestionsEnabled: true # Enable AI-powered suggestions (feature availability depends on aichat version)
+
+# -----------------------------------------------------------------------------
+# Multi-Modal Inputs - Settings for enabling multi-modal input (e.g., image input - if available)
+# -----------------------------------------------------------------------------
+multiModalEnabled: true # Enable multi-modal input (feature availability depends on aichat version and model support)
+
+# -----------------------------------------------------------------------------
+# Plugin System - Settings for loading and managing plugins (if plugin system is implemented)
+# -----------------------------------------------------------------------------
+plugins:
+  - name: weather # Plugin name: weather (example plugin)
+    script: /path/to/weather_plugin.sh # [italic yellow]Placeholder path - replace with actual path to your plugin script[/italic yellow]
+
+# -----------------------------------------------------------------------------
+# Voice Input/Output - Settings for enabling voice input and output (if supported)
+# -----------------------------------------------------------------------------
+voiceInput: true # Enable voice input (feature availability depends on aichat version)
+voiceOutput: true # Enable voice output (feature availability depends on aichat version)
+
+# -----------------------------------------------------------------------------
+# Offline Mode - Settings for offline mode operation (if supported)
+# -----------------------------------------------------------------------------
+offlineMode: true # Enable offline mode (feature availability depends on aichat version and model support)
+cacheFile: cache.db # Path to the cache file for offline mode (relative path within config directory)
+
+# -----------------------------------------------------------------------------
+# Real-Time Collaboration - Settings for real-time collaboration features (if implemented)
+# -----------------------------------------------------------------------------
+collaborationEnabled: false # Enable real-time collaboration (feature availability depends on aichat version)
+serverAddress: "0.0.0.0:8080" # Server address for collaboration features
+
+# -----------------------------------------------------------------------------
+# Functions Path - Path to the directory containing function scripts
+# -----------------------------------------------------------------------------
+functions_path: $HOME/.config/aichat/functions # [bold green]Corrected path to standard functions directory[/bold green]
+
+EOL
