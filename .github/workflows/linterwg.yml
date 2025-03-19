@@ -1,0 +1,33 @@
+name: Python Application
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pylint ruff
+      - name: Lint with Pylint
+        run: |
+          # Generate Pylint report
+          pylint --jobs=$(nproc) $(find . -name "*.py" ! -path "./venv/*") \
+            --output-format=html \
+            --report=yes > pylint_report.html
+      - name: Lint with Ruff
+        run: |
+          # Run Ruff checks
+          ruff check --show-source --fail-on E9,F63,F7,F82
+          # Format files
+          ruff fix --select U,U100 --extend-exclude venv/
+      - name: Test with pytest
+        run: pytest
