@@ -1,0 +1,369 @@
+const ccxt = require('ccxt');
+const dotenv = require('dotenv');
+const fs = require('fs').promises;
+const path = require('path');
+const readline = require('readline');
+
+// Load environment variables
+dotenv.config();
+
+// --- Configuration ---
+const DEFAULT_LOG_LEVEL = 'info';
+const CONFIG_FILE_PATH = 'config.json';
+const LOG_FILE_PATH = 'bot.log';
+
+// --- Simple Console Logger (replacing Rich) ---
+class Logger {
+    constructor(logFilePath, defaultLevel = DEFAULT_LOG_LEVEL) {
+        this.logFilePath = logFilePath;
+        this.logLevels = {
+            error: 0, warn: 1, info: 2, success: 3,
+            signal_buy: 4, signal_sell: 5, neutral: 6,
+            heartbeat: 7, profit: 8, loss: 9, debug: 10,
+            silly: 11, critical: 12
+        };
+        this.currentLevel = this.logLevels[defaultLevel];
+    }
+
+    setLevel(levelName) {
+        if (levelName.toLowerCase() in this.logLevels) {
+            this.currentLevel = this.logLevels[levelName.toLowerCase()];
+            this.info(`Log level set to: ${levelName.toUpperCase()}`);
+        } else {
+            this.warn(`Invalid log level: ${levelName}, using default ${DEFAULT_LOG_LEVEL.toUpperCase()}`);
+        }
+    }
+
+    _log(levelName, message) {
+        if (this.logLevels[levelName] <= this.currentLevel) {
+            const timestamp = new Date().toISOString();
+            const logMessage = `${timestamp} ${levelName.toUpperCase()} ${message}`;
+            console.log(logMessage);
+            fs.appendFile(this.logFilePath, logMessage + '\n').catch(err => console.error('Log write error:', err));
+        }
+    }
+
+    error(message) { this._log('error', message); }
+    warn(message) { this._log('warn', message); }
+    info(message) { this._log('info', message); }
+    success(message) { this._log('success', message); }
+    signal_buy(message) { this._log('signal_buy', message); }
+    signal_sell(message) { this._log('signal_sell', message); }
+    neutral(message) { this._log('neutral', message); }
+    heartbeat(message) { this._log('heartbeat', message); }
+    profit(message) { this._log('profit', message); }
+    loss(message) { this._log('loss', message); }
+    critical(message) { this._log('critical', message); }
+}
+
+const logger = new Logger(LOG_FILE_PATH);
+
+// --- Default Configuration ---
+const DEFAULT_CONFIG = {
+    exchange: {
+        name: 'bybit',
+        apiKey: process.env.BYBIT_API_KEY,
+        secret: process.env.BYBIT_API_SECRET,
+        rateLimit: 500
+    },
+    symbol: 'BTC/USDT',
+    timeframe: '1h',
+    historyCandles: 300,
+    analysisInterval: 60000,
+    logLevel: DEFAULT_LOG_LEVEL,
+    heartbeatInterval: 3600000,
+    maxRetries: 7,
+    retryDelay: 3000,
+    riskPercentage: 0.15,
+    maxPositionSizeUSDT: 150,
+    stopLossMultiplier: 2.5,
+    takeProfitMultiplier: 4.5,
+    slTpOffsetPercentage: 0.0015,
+    cacheTTL: { ohlcv: 450000, orderBook: 75000 },
+    indicators: {
+        sma: { fast: 12, slow: 35 },
+        stochRsi: { rsiPeriod: 16, stochasticPeriod: 16, kPeriod: 4, dPeriod: 4 },
+        atr: { period: 16 },
+        macd: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+        rsi: { period: 16 },
+        bollinger: { period: 20, stdDev: 2 }
+    },
+    thresholds: { oversold: 25, overbought: 75, minConfidence: 65 },
+    volumeConfirmation: { enabled: true, lookback: 25, multiplier: 1.2 },
+    fibonacciPivots: {
+        enabled: true,
+        period: '1d',
+        proximityPercentage: 0.006,
+        orderBookRangePercentage: 0.0025,
+        pivotWeight: 20,
+        orderBookWeight: 12,
+        levelsForBuyEntry: ['S1', 'S2', 'S3'],
+        levelsForSellEntry: ['R1', 'R2', 'R3']
+    }
+};
+
+// --- Global Cache ---
+const CACHE = {
+    markets: null,
+    ohlcv: {},
+    orderBook: {},
+    lastTradeTime: null,
+    cooldownActiveUntil: 0,
+    initialBalance: null
+};
+
+// --- Config Manager ---
+class ConfigManager {
+    async load(cliConfig) {
+        let fileConfig = {};
+        try {
+            if (await fs.access(CONFIG_FILE_PATH).then(() => true).catch(() => false)) {
+                fileConfig = JSON.parse(await fs.readFile(CONFIG_FILE_PATH, 'utf8'));
+                logger.info(`Loaded configuration from ${CONFIG_FILE_PATH}`);
+            } else {
+                logger.info(`${CONFIG_FILE_PATH} not found, using default configuration`);
+            }
+        } catch (e) {
+            logger.error(`Error loading ${CONFIG_FILE_PATH}: ${e}`);
+        }
+
+        this.config = { ...DEFAULT_CONFIG, ...fileConfig, ...cliConfig };
+        this._validateConfig();
+        this._applyLogLevel();
+        return this.config;
+    }
+
+    _applyLogLevel() {
+        logger.setLevel(this.config.logLevel);
+    }
+
+    _validateConfig() {
+        const requiredKeys = ['symbol', 'timeframe', 'exchange.apiKey', 'exchange.secret'];
+        for (const key of requiredKeys) {
+            if (!this._nestedGet(this.config, key)) {
+                throw new Error(`Missing required config: ${key}`);
+            }
+        }
+    }
+
+    _nestedGet(obj, key) {
+        return key.split('.').reduce((acc, part) => acc && acc[part], obj);
+    }
+
+    displayConfig() {
+        logger.info('Current Configuration');
+        console.log(JSON.stringify(this.config, null, 2));
+    }
+}
+
+// --- Market Data Provider ---
+class MarketDataProvider {
+    constructor(exchangeConfig, config) {
+        this.exchange = new ccxt[exchangeConfig.name]({
+            apiKey: exchangeConfig.apiKey,
+            secret: exchangeConfig.secret,
+            enableRateLimit: true,
+            rateLimit: exchangeConfig.rateLimit
+        });
+        this.config = config;
+    }
+
+    async loadMarkets() {
+        if (!CACHE.markets) {
+            try {
+                CACHE.markets = await this.exchange.loadMarkets();
+                logger.info('Markets loaded from exchange');
+            } catch (e) {
+                logger.critical(`Failed to load markets: ${e}`);
+                throw e;
+            }
+        }
+        return CACHE.markets;
+    }
+
+    async fetchOhlcv(symbol, timeframe, limit, retries = 0) {
+        const cacheKey = `${symbol}-${timeframe}-${limit}`;
+        const cachedData = CACHE.ohlcv[cacheKey];
+        if (cachedData && (Date.now() - cachedData.timestamp < this.config.cacheTTL.ohlcv)) {
+            return cachedData.data;
+        }
+
+        try {
+            const data = await this.exchange.fetchOHLCV(symbol, timeframe, undefined, limit);
+            CACHE.ohlcv[cacheKey] = { data: data.reverse(), timestamp: Date.now() };
+            return data.reverse();
+        } catch (e) {
+            if (retries < this.config.maxRetries) {
+                logger.warn(`Network error fetching OHLCV, retrying (${retries + 1}/${this.config.maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, this.config.retryDelay * Math.pow(2, retries)));
+                return this.fetchOhlcv(symbol, timeframe, limit, retries + 1);
+            }
+            logger.error(`Failed to fetch OHLCV: ${e}`);
+            throw e;
+        }
+    }
+
+    async fetchOrderBook(symbol, retries = 0) {
+        const cacheKey = symbol;
+        const cachedData = CACHE.orderBook[cacheKey];
+        if (cachedData && (Date.now() - cachedData.timestamp < this.config.cacheTTL.orderBook)) {
+            return cachedData.data;
+        }
+
+        try {
+            const data = await this.exchange.fetchOrderBook(symbol);
+            CACHE.orderBook[cacheKey] = { data, timestamp: Date.now() };
+            return data;
+        } catch (e) {
+            if (retries < this.config.maxRetries) {
+                logger.warn(`Network error fetching order book, retrying (${retries + 1}/${this.config.maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, this.config.retryDelay * Math.pow(2, retries)));
+                return this.fetchOrderBook(symbol, retries + 1);
+            }
+            logger.error(`Failed to fetch order book: ${e}`);
+            throw e;
+        }
+    }
+}
+
+// --- Indicator Engine (Simplified) ---
+class IndicatorEngine {
+    constructor(config) {
+        this.config = config;
+        this.marketData = new MarketDataProvider(this.config.exchange, this.config);
+    }
+
+    // Simplified SMA (you'd need to implement other indicators)
+    sma(values, period) {
+        if (values.length < period) return null;
+        return values.slice(-period).reduce((sum, val) => sum + val, 0) / period;
+    }
+
+    async calculateAll(candles) {
+        const closes = candles.map(c => c[4]);
+        return {
+            sma: {
+                fast: this.sma(closes, this.config.indicators.sma.fast),
+                slow: this.sma(closes, this.config.indicators.sma.slow)
+            }
+            // Add other indicators here
+        };
+    }
+}
+
+// --- Signal Generator ---
+class SignalGenerator {
+    constructor(config) {
+        this.config = config;
+    }
+
+    generate(indicatorData) {
+        if (!indicatorData) return [];
+        const { sma } = indicatorData;
+        const signals = [];
+        if (sma.fast > sma.slow) {
+            signals.push({ type: 'BUY', reason: 'SMA Crossover', confidence: 75 });
+        } else if (sma.fast < sma.slow) {
+            signals.push({ type: 'SELL', reason: 'SMA Crossover', confidence: 75 });
+        }
+        return signals.filter(s => s.confidence >= this.config.thresholds.minConfidence);
+    }
+}
+
+// --- Trading Bot ---
+class TradingBot {
+    constructor(config) {
+        this.config = config;
+        this.marketData = new MarketDataProvider(this.config.exchange, this.config);
+        this.indicatorEngine = new IndicatorEngine(this.config);
+        this.signalGenerator = new SignalGenerator(this.config);
+        this.tradeContext = { currentPosition: null };
+        this.intervals = [];
+    }
+
+    async start() {
+        await this.marketData.loadMarkets();
+        logger.success(`Bot started, trading ${this.config.symbol} on ${this.config.timeframe}`);
+        this.intervals.push(setInterval(() => this.analysisCycle(), this.config.analysisInterval));
+        this.intervals.push(setInterval(() => logger.heartbeat('Bot heartbeat...'), this.config.heartbeatInterval));
+    }
+
+    async analysisCycle() {
+        try {
+            const candles = await this.marketData.fetchOhlcv(this.config.symbol, this.config.timeframe, this.config.historyCandles);
+            const indicators = await this.indicatorEngine.calculateAll(candles);
+            const signals = this.signalGenerator.generate(indicators);
+            for (const signal of signals) {
+                logger[signal.type.toLowerCase()](`${signal.type} Signal - ${signal.reason} (${signal.confidence}%)`);
+                if (signal.type === 'BUY' && !this.tradeContext.currentPosition) {
+                    await this.placeOrder('buy', 0.001, candles[candles.length - 1][4], signal.reason);
+                } else if (signal.type === 'SELL' && this.tradeContext.currentPosition) {
+                    await this.closePosition(signal.reason);
+                }
+            }
+        } catch (e) {
+            logger.error(`Analysis cycle error: ${e}`);
+        }
+    }
+
+    async placeOrder(side, quantity, price, reason) {
+        try {
+            const order = await this.marketData.exchange.createOrder(this.config.symbol, 'limit', side, quantity, price);
+            logger.info(`${side.toUpperCase()} order placed: ${quantity} @ ${price}`);
+            if (side === 'buy') this.tradeContext.currentPosition = 'BUY';
+        } catch (e) {
+            logger.error(`Error placing ${side} order: ${e}`);
+        }
+    }
+
+    async closePosition(reason) {
+        try {
+            await this.marketData.exchange.createOrder(this.config.symbol, 'market', 'sell', 0.001);
+            logger.info(`Position closed - ${reason}`);
+            this.tradeContext.currentPosition = null;
+        } catch (e) {
+            logger.error(`Error closing position: ${e}`);
+        }
+    }
+
+    stop() {
+        this.intervals.forEach(clearInterval);
+        logger.warn('Bot stopped');
+    }
+}
+
+// --- Main Execution ---
+async function runBot() {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    const prompt = (question, defaultValue) => new Promise(resolve => {
+        rl.question(question, answer => resolve(answer || defaultValue));
+    });
+
+    const exchangeTest = new ccxt.bybit();
+    await exchangeTest.loadMarkets();
+    const symbols = Object.keys(exchangeTest.markets);
+    const timeframes = Object.keys(exchangeTest.timeframes);
+
+    const symbol = await prompt('Enter symbol (e.g., BTC/USDT): ', 'BTC/USDT');
+    const timeframe = await prompt('Enter timeframe (e.g., 1h): ', '1h');
+
+    rl.close();
+
+    const configManager = new ConfigManager();
+    const config = await configManager.load({ symbol, timeframe });
+    configManager.displayConfig();
+
+    const bot = new TradingBot(config);
+    await bot.start();
+
+    process.on('SIGINT', () => {
+        bot.stop();
+        process.exit(0);
+    });
+}
+
+runBot().catch(e => logger.error(`Bot execution error: ${e}`));
