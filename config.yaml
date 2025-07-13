@@ -1,136 +1,37 @@
-# Global Settings
-serve_addr: 127.0.0.1:8000
-user_agent: auto
-save_shell_history: true
-syncModelsURL: https://raw.githubusercontent.com/sigoden/aichat/main/models.yaml
-
-# Clients
-clients:
-  - type: gemini
-    api_key: AIzaSyDGIJHSOiWKfgbe5dQG7Lc4w9EMtRxUhPQ
-    extra:
-      safety_settings:
-        - category: HARM_CATEGORY_HARASSMENT
-          threshold: BLOCK_NONE
-        - category: HARM_CATEGORY_HATE_SPEECH
-          threshold: BLOCK_NONE
-        - category: HARM_CATEGORY_SEXUALLY_EXPLICIT
-          threshold: BLOCK_NONE
-        - category: HARM_CATEGORY_DANGEROUS_CONTENT
-          threshold: BLOCK_NONE
-
-# Models
-models:
-  - name: gemini:gemini-2.0-flash-thinking-exp-01-21
-    client: gemini
-
-# LLM Settings
-model: gemini:gemini-2.0-flash-thinking-exp-01-21
-temperature: 0.7
-top_p: 0.9
-max_output_tokens: 2048
-
-# Behavior Settings
-stream: true
-save: true
-keybinding: emacs
-editor: nano
-wrap: auto
-wrap_code: true
-highlight: true
-save_session: true
-compress_threshold: 2000
-copy_to_clipboard: true
-
-# Function Calling
-function_calling: true
-mapping_tools:
-  fs: 'fs_cat,fs_ls,fs_mkdir,fs_rm,fs_write'
-  web: 'web_search'
-use_tools: fs, web
-
-# Preliminary Settings
-prelude: role:default
-repl_prelude: session:default
-
-# Session Settings
-summarize_prompt: 'Summarize the session concisely.'
-
-# RAG Settings
-rag_embedding_model: gemini:embedding-001
-rag_reranker_model: gemini:reranker-001
-rag_top_k: 5
-rag_chunk_size: 512
-rag_chunk_overlap: 128
-rag_batch_size: 10
-rag_template: |
-  __CONTEXT__
-  __INPUT__
-
-# Appearance Settings
-left_prompt: '[{session}] {role} > '
-right_prompt: '{model}'
-themes:
-  default:
-    prompt_color: "\033[1;34m"
-    response_color: "\033[1;32m"
-light_themes: false
-
-# Macros
-macros:
-  greet: "Hello, how can I assist you today?"
-  time: "The current time is: $(date +%H:%M:%S)"
-  date: "Today is: $(date +%Y-%m-%d)"
-
-# Functions
-functions:
-  - name: get_date
-    command: "date"
-  - name: get_weather
-    command: "/path/to/weather_plugin.sh"
-  - name: get_system_info
-    command: "uname -a"
-
-# Agents
-agents:
-  - name: assistant
-    instructions: "Act as a helpful assistant with a friendly tone."
-  - name: coding-agent
-    instructions: |
-      You are a Senior Software Developer with expertise in coding, debugging, and explaining code.
-      - Generate accurate code snippets based on user requests (e.g., "Write a Python function to sort a list").
-      - Debug code by identifying errors and suggesting fixes (e.g., "Fix this: print(x.sort())").
-      - Explain code clearly, breaking down logic step-by-step (e.g., "Explain how this loop works").
-      - Use tools: 'fs' to read/write files (e.g., fs_cat, fs_write) and 'web' to search for solutions.
-      - Format code with proper syntax and include comments for clarity.
-      - If unsure, ask clarifying questions (e.g., "What language do you want this in?").
-
-# Debug Settings
-debug_mode: true
-log_file: ~/.config/aichat/aichat.log
-
-# AI-Powered Suggestions
-suggestionsEnabled: true
-
-# Multi-Modal Inputs
-multiModalEnabled: true
-
-# Plugin System
-plugins:
-  - name: weather
-    script: /path/to/weather_plugin.sh
-
-# Voice Input/Output
-voiceInput: true
-voiceOutput: true
-
-# Offline Mode
-offlineMode: true
-cacheFile: /.config/aichat(cache.db)
-
-# Real-Time Collaboration
-collaborationEnabled: false
-serverAddress: "0.0.0.0:8080"
-
-# Functions Path
-functions_path: /data/data/com.termux/files/home/llm-functions
+exchange:
+  exchange_id: bybit
+trading:
+  simulation_mode: true
+risk_management:
+  order_size_percentage: 1.0
+  take_profit_percentage: 2.0
+  stop_loss_percentage: 1.0
+indicators:
+  ema_period: 20
+  rsi_period: 14
+  macd_short_period: 12
+  macd_long_period: 26
+  macd_signal_period: 9
+  stoch_rsi_period: 14
+  stoch_rsi_k_period: 3
+  stoch_rsi_d_period: 3
+  volatility_window: 20
+  volatility_multiplier: 2.0
+order_book:
+  depth: 25
+  imbalance_threshold: 1.5
+  volume_cluster_threshold: 10.0
+  ob_delta_lookback: 10
+  cluster_proximity_threshold_pct: 0.5
+trailing_stop:
+  trailing_stop_active: true
+  trailing_stop_callback: 0.01
+signal_weights:
+  ema_weight: 1.0
+  rsi_weight: 1.0
+  macd_weight: 1.0
+  stoch_rsi_weight: 1.0
+  imbalance_weight: 1.0
+  ob_delta_change_weight: 1.0
+  spread_weight: 1.0
+  cluster_proximity_weight: 1.0

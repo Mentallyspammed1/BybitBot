@@ -3,6 +3,7 @@ import logging
 import os
 import time
 from typing import Any, Dict
+from dotenv import load_dotenv
 
 import ccxt
 import yaml
