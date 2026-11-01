@@ -14,3 +14,6 @@ mypy
 pytest
 pytest-cov
 pip-check-updates
+flask
+requests
+rich

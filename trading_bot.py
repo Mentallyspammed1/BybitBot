@@ -5,7 +5,9 @@ import time
 from typing import Any, Dict
 
 import ccxt
+import numpy as np
 import yaml
+from dotenv import load_dotenv
 from colorama import Fore, Style, init as colorama_init
 
 colorama_init(autoreset=True)
